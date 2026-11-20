@@ -484,13 +484,34 @@
     var bg = $('vnBg');
     if (!name || bg.dataset.bg === name) return;
     bg.dataset.bg = name;
+    var url = 'assets/bg/' + name + '.jpg';
+    // 首次加载不淡出（此时还没有画面），后续换景才做交叉淡入
+    if (!bg.getAttribute('src')) {
+      bg.src = url;
+      return;
+    }
     bg.classList.add('is-out');
     setTimeout(function () {
-      bg.src = 'assets/bg/' + name + '.jpg';
+      bg.src = url;
       bg.classList.remove('is-out');
     }, 160);
   }
 
+  /* 预取下一幕背景：切场景时不至于卡一下 */
+  var prefetched = {};
+  function prefetchNextBg() {
+    if (!STORY) return;
+    for (var i = story.idx + 1; i < STORY.beats.length; i++) {
+      var b = STORY.beats[i];
+      if (b && b.scene && b.bg && !prefetched[b.bg]) {
+        prefetched[b.bg] = true;
+        var img = new Image();
+        img.decoding = 'async';
+        img.src = 'assets/bg/' + b.bg + '.jpg';
+        return;
+      }
+    }
+  }
   /* who = 'aw' | 'mh' | 'narr' | null;  只显示正在说话的人 */
   function setChar(who, expr) {
     var img = $('vnChar');
@@ -632,7 +653,7 @@
       story.idx += 1;
       if (story.idx >= STORY.beats.length) { finishStory(); return; }
       b = STORY.beats[story.idx];
-      if (b.scene) { $('vnScene').textContent = b.scene; setBg(b.bg); continue; }
+      if (b.scene) { $('vnScene').textContent = b.scene; setBg(b.bg); setTimeout(prefetchNextBg, 600); continue; }
       break;
     }
 

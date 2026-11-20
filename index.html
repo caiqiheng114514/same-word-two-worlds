@@ -13,7 +13,7 @@
 
   <!-- ======== 封面 ======== -->
   <section class="screen cover" id="screen-cover">
-    <img class="cover-bg" src="assets/cover.jpg" alt="天星小轮驶过维多利亚港，背景是香港岛天际线">
+    <img class="cover-bg" id="coverBg" src="assets/cover.jpg" width="900" height="1350" fetchpriority="high" decoding="async" alt="天星小轮驶过维多利亚港，背景是香港岛天际线">
     <div class="cover-veil" aria-hidden="true"></div>
 
     <div class="cover-inner">
@@ -42,11 +42,11 @@
   <!-- ======== 情景对话（galgame / 视觉小说） ======== -->
   <section class="screen vn" id="screen-story">
     <div class="vn-stage" id="vnStage">
-      <img class="vn-bg" id="vnBg" src="assets/bg/street-out.jpg" alt="">
+      <img class="vn-bg" id="vnBg" alt="" decoding="async">
       <div class="vn-fx" aria-hidden="true"></div>
 
       <!-- 只显示正在说话的人，固定在左下角 -->
-      <img class="vn-char" id="vnChar" alt="" hidden>
+      <img class="vn-char" id="vnChar" alt="" decoding="async" hidden>
 
       <div class="vn-top">
         <div class="vn-scene" id="vnScene">第一幕 · 早上 11:00｜旺角街口</div>
