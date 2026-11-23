@@ -47,8 +47,10 @@
 
       <!-- 只显示正在说话的人，固定在左下角 -->
       <figure class="vn-face" id="vnFace" hidden>
-        <img class="vn-face-img" id="vnChar" alt="" decoding="async" hidden>
-        <figcaption class="vn-face-tag" id="vnFaceTag"></figcaption>
+        <picture class="vn-face-pic">
+          <source type="image/webp" id="vnCharWebp">
+          <img class="vn-face-img" id="vnChar" alt="" decoding="async" hidden>
+        </picture>
       </figure>
 
       <div class="vn-top">
@@ -225,5 +227,17 @@
 <script src="kb.js"></script>
 <script src="story.js"></script>
 <script src="app.js"></script>
+  <audio id="bgm" loop preload="none">
+    <source src="assets/music/bgm.webm" type="audio/webm">
+    <source src="assets/music/bgm.mp3" type="audio/mpeg">
+  </audio>
+
+  <button class="bgm-btn" id="btnBgm" type="button" aria-label="背景音乐">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>
+      <path class="wave" d="M16.5 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path class="slash" d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </button>
 </body>
 </html>

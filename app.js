@@ -426,6 +426,54 @@
     return card;
   }
 
+  /* ---------------- 背景音乐 ---------------- */
+  var audio = {
+    el: null, on: true, fadeTimer: null,
+    VOLUME: 0.2,
+    init: function () {
+      this.el = $('bgm');
+      var saved = localStorage.getItem('swtw-bgm');
+      this.on = saved === null ? true : saved === '1';
+      this.applyBtn();
+      var self = this;
+      $('btnBgm').addEventListener('click', function () { self.toggle(); });
+    },
+    play: function () {
+      if (!this.on || !this.el) return;
+      var el = this.el;
+      if (!el.dataset.ready) { el.dataset.ready = '1'; el.load(); }
+      el.volume = 0;
+      var p = el.play();
+      if (p && p.catch) p.catch(function () {});
+      this.fadeTo(this.VOLUME);
+    },
+    fadeTo: function (target) {
+      var el = this.el;
+      clearInterval(this.fadeTimer);
+      var self = this;
+      this.fadeTimer = setInterval(function () {
+        var v = el.volume + (target > el.volume ? 0.02 : -0.02);
+        if ((target > el.volume && v >= target) || (target <= el.volume && v <= target)) {
+          el.volume = target;
+          clearInterval(self.fadeTimer);
+        } else {
+          el.volume = Math.max(0, Math.min(1, v));
+        }
+      }, 55);
+    },
+    toggle: function () {
+      this.on = !this.on;
+      localStorage.setItem('swtw-bgm', this.on ? '1' : '0');
+      this.applyBtn();
+      if (this.on) this.play(); else this.fadeTo(0);
+    },
+    applyBtn: function () {
+      var b = $('btnBgm');
+      if (!b) return;
+      b.classList.toggle('is-off', !this.on);
+      b.setAttribute('aria-label', this.on ? '关闭背景音乐' : '开启背景音乐');
+    }
+  };
   /* ---------------- 情景对话（galgame / 视觉小说） ---------------- */
   var STORY = window.__STORY__ || null;
   var WHO = { lb: '刘博康', zq: '赵祈岳', cq: '蔡奇衡', narr: '旁白' };
@@ -439,7 +487,7 @@
   var lastAdvance = 0;
 
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
-  function faceSrc(id) { return 'assets/face/' + id + '.jpg'; }
+  function faceSrc(id, ext) { return 'assets/char/' + id + '.' + (ext || 'png'); }
 
   /* 默契值：0–100，分四档 */
   function bondStage(v) {
@@ -513,6 +561,25 @@
       }
     }
   }
+  /* 判定徽章：紧跟名牌右边，别压住名牌和人物 */
+  function placeVerdict() {
+    var badge = $('vnVerdict'), plate = $('vnName'), stage = $('vnStage');
+    if (!badge || badge.hidden || !plate || !stage) return;
+    var pr = plate.getBoundingClientRect();
+    var sr = stage.getBoundingClientRect();
+    var left = pr.right - sr.left + 12;
+    var maxLeft = sr.width - badge.offsetWidth - 12;
+    badge.style.left = Math.round(Math.max(12, Math.min(left, maxLeft))) + 'px';
+  }
+  /* 把人物底部钉在对话框顶部：文本框长高时人也跟着上移，永远贴住 */
+  function syncFaceToBox() {
+    var face = $('vnFace'), box = $('vnBox'), stage = $('vnStage');
+    if (!face || !box || !stage || face.hidden) return;
+    var sr = stage.getBoundingClientRect();
+    var br = box.getBoundingClientRect();
+    var bottom = Math.max(0, sr.bottom - br.top) - 4;   // 轻微压住一点，看起来是站在框上
+    face.style.bottom = Math.round(bottom) + 'px';
+  }
   /* who = 'lb' | 'zq' | 'cq' | 'narr' | null；只显示正在说话的那个人 */
   function setChar(who) {
     var img = $('vnChar');
@@ -524,9 +591,12 @@
       img.dataset.who = '';
       return;
     }
-    var src = faceSrc(who);
+    var src = faceSrc(who, 'png');
+    var srcWebp = faceSrc(who, 'webp');
     var changed = img.dataset.who !== who;
     if (img.getAttribute('src') !== src) {
+      var s = document.getElementById('vnCharWebp');
+      if (s) s.srcset = srcWebp;
       img.src = src;
       img.alt = WHO[who] || '';
     }
@@ -534,7 +604,7 @@
     img.hidden = false;
     wrap.hidden = false;
     wrap.dataset.who = who;
-    $('vnFaceTag').textContent = WHO_TAG[who] || '';
+    requestAnimationFrame(syncFaceToBox);
     if (changed) {                          // 换人时重放登场动画
       wrap.style.animation = 'none';
       void wrap.offsetWidth;
@@ -557,6 +627,7 @@
       if (story.shown >= story.full.length) {
         story.typing = false;
         $('vnBox').classList.add('is-ready');
+        syncFaceToBox();
         return;
       }
       story.timer = setTimeout(step, 18);
@@ -568,11 +639,13 @@
     clearTimeout(story.timer);
     $('vnText').textContent = story.full;
     $('vnBox').classList.add('is-ready');
+    syncFaceToBox();
   }
 
   /* ---------------- 开演 ---------------- */
   function startStory() {
     if (!STORY) return;
+    audio.play();   // 必须是用户点击触发，浏览器才允许播放
     story.idx = -1;
     story.bond = (STORY.start || 20);
     story.streak = 0;
@@ -725,6 +798,7 @@
       btn.addEventListener('click', function () { resolveChoice(c, opt); });
       box.appendChild(btn);
     });
+    requestAnimationFrame(syncFaceToBox);
   }
 
   function resolveChoice(c, opt) {
@@ -772,9 +846,11 @@
     $('vBadge').textContent = ok ? '✓' : '!';
     $('vText').textContent = (ok ? '接住了 ' : '没听懂 ') + (d > 0 ? '+' : '') + d;
     badge.hidden = false;
+    requestAnimationFrame(placeVerdict);
 
     $('vnFix').textContent = c.fix;
     $('vnFix').hidden = false;
+    requestAnimationFrame(syncFaceToBox);
 
     setTimeout(function () {
       if (story.idx !== at0) return;
@@ -868,7 +944,11 @@
 
     // 故事
     $('btnStoryNext').addEventListener('click', storyAdvance);
+    audio.init();
+
     $('btnStoryBack').addEventListener('click', stepBack);
+    window.addEventListener('resize', syncFaceToBox);
+    window.addEventListener('orientationchange', function () { setTimeout(syncFaceToBox, 120); });
     $('btnStoryExit').addEventListener('click', function () { renderCover(); show('cover'); });
     $('btnStoryHome').addEventListener('click', function () { renderCover(); show('cover'); });
     $('btnStoryAgain').addEventListener('click', startStory);

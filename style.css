@@ -759,57 +759,35 @@ body { overflow: hidden; }
     repeating-linear-gradient(45deg, rgba(0, 0, 0, .05) 0 1.5px, rgba(0, 0, 0, 0) 1.5px 3.5px);
 }
 
-/* 人物：头像卡。照片裁不出干净轮廓，做成漫画照片卡反而更像原作的一部分 */
+/* 人物：透明立绘。只显示正在说话的人，固定在左下角 */
 .vn-face {
   position: absolute;
-  left: 3.5%;
-  bottom: 25.5%;
+  left: 4%;
+  bottom: 25%;
   z-index: 3;
-  width: clamp(96px, 24vw, 132px);
+  height: 44%;
   margin: 0;
-  animation: faceIn .28s cubic-bezier(.2, .8, .3, 1) both;
+  animation: faceIn .3s cubic-bezier(.2, .8, .3, 1) both;
 }
 .vn-face-img {
   display: block;
-  width: 100%;
-  height: auto;
-  border: 3px solid #1a222c;
-  border-radius: 3px;
-  box-shadow: 4px 4px 0 rgba(26, 34, 44, .85), 0 14px 26px -10px rgba(0, 0, 0, .7);
-  background: #f4ead6;
-  transform: rotate(-1.6deg);
+  height: 100%;
+  width: auto;
+  filter: drop-shadow(0 12px 18px rgba(18, 26, 36, .55));
 }
-.vn-face[data-who="cq"] .vn-face-img { transform: rotate(1.8deg); }
-.vn-face[data-who="lb"] .vn-face-img { transform: rotate(-1.2deg); }
-.vn-face-tag {
-  position: absolute;
-  left: 50%;
-  bottom: -9px;
-  transform: translateX(-50%) rotate(-1.6deg);
-  padding: 2px 8px;
-  border: 2px solid #1a222c;
-  border-radius: 3px;
-  background: #f4ead6;
-  color: #1a222c;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .1em;
-  white-space: nowrap;
-}
-.vn-face-tag:empty { display: none; }
+/* 赵祈岳那张取景更远，放大一档让头部大小接近 */
+.vn-face[data-who="zq"] { height: 60%; }
+.vn-face[data-who="lb"] { height: 38%; }
+.vn-face[data-who="cq"] { height: 46%; }
+/* 蔡奇衡镜像，两个人面对面站 */
+.vn-face[data-who="cq"] .vn-face-img { transform: scaleX(-1); }
 @keyframes faceIn {
-  from { opacity: 0; transform: translateY(16px) scale(.94) rotate(-3deg); }
+  from { opacity: 0; transform: translateY(18px) scale(.98); }
   to   { opacity: 1; transform: none; }
 }
 @media (max-width: 520px) {
-  .vn-face { width: clamp(86px, 25vw, 110px); bottom: 24%; left: 3%; }
+  .vn-face { height: 40%; bottom: 24%; left: 3%; }
 }
-/* 选项展开时对话框变高，头像要往上让位 */
-.vn-stage.has-choices .vn-face { bottom: 40%; }
-@media (max-width: 520px) {
-  .vn-stage.has-choices .vn-face { bottom: 44%; }
-}
-
 /* 顶部：场景牌 + 默契值 */
 .vn-top {
   position: absolute;
@@ -1242,3 +1220,31 @@ body { overflow: hidden; }
   cursor: pointer;
 }
 .back:hover { border-color: var(--ink-soft); color: var(--ink); }
+
+/* ---------- 背景音乐开关 ---------- */
+.bgm-btn {
+  position: fixed;
+  right: 10px;
+  top: 46%;
+  z-index: 40;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid rgba(244, 234, 214, .8);
+  background: rgba(16, 22, 30, .72);
+  color: #f4ead6;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, .8);
+  transition: background .18s ease, color .18s ease, transform .1s ease;
+}
+.bgm-btn:hover { background: rgba(244, 234, 214, .92); color: #1a222c; }
+.bgm-btn:active { transform: scale(.94); }
+.bgm-btn .slash { opacity: 0; }
+.bgm-btn.is-off .wave { opacity: .25; }
+.bgm-btn.is-off .slash { opacity: 1; }
+@media (max-width: 520px) {
+  .bgm-btn { width: 34px; height: 34px; right: 8px; top: 44%; }
+}
