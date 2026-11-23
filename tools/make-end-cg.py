@@ -1,32 +1,39 @@
 # -*- coding: utf-8 -*-
-"""结算 CG（四档默契各一张）
+"""结算 CG（四档默契各一张 · 三人合影版）
 
-这版的目标是「看得清」：
-  · 背景大幅提亮（原来偏灰偏暗）
-  · 人物恢复原色并抽饱和、提亮，再加一圈米白外发光 + 墨线
-  · 背景去色压灰 → 人物彩色 → 天然形成对比，人物跳出来
-  · 整张只留很轻的网点和暗角，不再把人物也染成墨米色
+用法：python tools/make-end-cg.py
+产出：assets/cg/cg-end-{cold,timid,warm,close}.jpg
+
+构图：场景背景（双色调、提亮）+ 三张「漫画照片卡」错落叠放。
+照片卡带米白相框边 + 墨线 + 投影，和对话里的头像卡是同一套语言，
+因此不会像把人直接抠图贴上去。
 """
 import os
 from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, ImageOps
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BG = os.path.join(ROOT, "assets", "bg")
-SP = os.path.join(ROOT, "assets", "sp")
+FACE = os.path.join(ROOT, "assets", "face")
 OUT = os.path.join(ROOT, "assets", "cg")
 os.makedirs(OUT, exist_ok=True)
 
 W, H = 1600, 1000
 INK = (26, 34, 44)
-CREAM = (250, 244, 230)
+CREAM = (248, 242, 228)
 
-# key, 背景, 阿伟, 小明, 小明镜像, ax, mx, 阿高, 明高, 背景提亮, 背景染的温度
+# key, 背景, 提亮, 暖/冷, 三张卡的 (x, 底边y, 尺寸, 角度)
 VARIANTS = [
-    ("cg-end-cold",  "station.jpg",    "aw-normal.png", "mh-normal.png",  False, 0.26, 0.72, 0.60, 0.58, 1.20, (208, 220, 232)),
-    ("cg-end-timid", "cafe-in.jpg",    "aw-normal.png", "mh-puzzled.png", True,  0.33, 0.65, 0.60, 0.58, 1.75, (246, 236, 214)),
-    ("cg-end-warm",  "street-out.jpg", "aw-happy.png",  "mh-normal.png",  True,  0.34, 0.62, 0.60, 0.58, 1.14, (252, 236, 204)),
-    ("cg-end-close", "night-city.jpg", "aw-happy.png",  "mh-happy.png",   True,  0.36, 0.60, 0.62, 0.60, 1.18, (255, 230, 178)),
+    ("cg-end-cold",  "station.jpg",    1.16, (206, 218, 232), 0.86,
+     [(0.30, 0.90, 300, -7), (0.52, 0.93, 320, 2), (0.74, 0.90, 300, 7)]),
+    ("cg-end-timid", "cafe-in.jpg",    1.55, (244, 234, 212), 0.72,
+     [(0.31, 0.90, 300, -6), (0.53, 0.93, 320, 1), (0.75, 0.90, 300, 6)]),
+    ("cg-end-warm",  "street-out.jpg", 1.10, (252, 238, 206), 0.88,
+     [(0.30, 0.91, 320, -5), (0.52, 0.94, 340, 0), (0.74, 0.91, 320, 5)]),
+    ("cg-end-close", "night-city.jpg", 1.02, (255, 232, 180), 0.98,
+     [(0.29, 0.92, 340, -4), (0.52, 0.95, 360, 0), (0.75, 0.92, 340, 4)]),
 ]
+
+ORDER = ["zq", "lb", "cq"]   # 左中右
 
 
 def fit_cover(im, w, h, focus=0.45):
@@ -37,66 +44,41 @@ def fit_cover(im, w, h, focus=0.45):
     return im.crop((left, top, left + w, top + h))
 
 
-def brighten_bg(im, lift, tint):
-    """背景：提亮 + 略微去色 + 染一点环境色，让它退到人物后面"""
+def brighten(im, lift, tint, gamma=0.76):
     im = ImageEnhance.Brightness(im).enhance(lift)
-    im = Image.blend(im, Image.new("RGB", im.size, tint), 0.22)
-    # 中间调提亮（gamma），阴影不至于糊成一片
-    lut = [min(255, int(255 * ((i / 255) ** 0.74))) for i in range(256)]
+    im = Image.blend(im, Image.new("RGB", im.size, tint), 0.14)
+    lut = [min(255, int(255 * ((i / 255) ** gamma))) for i in range(256)]
     im = im.point(lut * 3)
-    im = ImageEnhance.Color(im).enhance(0.72)      # 背景退色
-    im = ImageEnhance.Contrast(im).enhance(0.95)
+    im = ImageEnhance.Color(im).enhance(0.62)
     return im
 
 
-def load_char(path, height_ratio, mirror=False):
-    ch = Image.open(os.path.join(SP, path)).convert("RGBA")
-    th = int(H * height_ratio)
-    tw = int(ch.width * th / ch.height)
-    ch = ch.resize((tw, th), Image.LANCZOS)
-    if mirror:
-        ch = ImageOps.mirror(ch)
-    rgb = ch.convert("RGB")
-    rgb = ImageEnhance.Color(rgb).enhance(1.25)    # 人物抽饱和
-    rgb = ImageEnhance.Brightness(rgb).enhance(1.10)
-    rgb = ImageEnhance.Contrast(rgb).enhance(1.06)
-    out = rgb.convert("RGBA")
-    out.putalpha(ch.getchannel("A"))
-    return out
+def photo_card(path, size, angle):
+    """米白相框 + 墨线 + 投影，旋转后返回 RGBA"""
+    pad = int(size * 0.06)
+    canvas_size = size + pad * 2
+    card = Image.new("RGBA", (canvas_size, canvas_size), CREAM + (255,))
+    img = Image.open(path).convert("RGB").resize((size, size), Image.LANCZOS)
+    card.paste(img, (pad, pad))
+
+    d = ImageDraw.Draw(card)
+    d.rectangle((0, 0, canvas_size - 1, canvas_size - 1), outline=INK, width=5)
+    d.rectangle((pad - 3, pad - 3, pad + size + 2, pad + size + 2), outline=INK, width=3)
+
+    # 投影
+    shadow = Image.new("RGBA", (canvas_size + 40, canvas_size + 40), (0, 0, 0, 0))
+    sil = Image.new("RGBA", card.size, (0, 0, 0, 150))
+    sil.putalpha(card.getchannel("A").point(lambda a: int(a * 0.55)))
+    shadow.paste(sil, (20, 24))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(14))
+
+    out = Image.new("RGBA", shadow.size, (0, 0, 0, 0))
+    out.alpha_composite(shadow)
+    out.alpha_composite(card, (20, 20))
+    return out.rotate(angle, resample=Image.BICUBIC, expand=True)
 
 
-def grow_alpha(a, px):
-    return a.filter(ImageFilter.MaxFilter(px * 2 + 1))
-
-
-def with_outline_and_glow(ch, px=3, glow=6):
-    """墨线勾边 + 米白外发光：让彩色人物在灰背景上明确跳出来"""
-    a = ch.getchannel("A")
-    # 外发光（大一圈的米白，模糊，半透明）
-    halo = Image.new("RGBA", ch.size, CREAM + (0,))
-    halo_a = grow_alpha(a, glow).filter(ImageFilter.GaussianBlur(glow * 0.45))
-    halo_a = halo_a.point(lambda p: int(p * 0.62))
-    halo.putalpha(halo_a)
-    # 墨线（中一圈）
-    line = Image.new("RGBA", ch.size, INK + (0,))
-    line.putalpha(grow_alpha(a, px))
-    canvas = Image.new("RGBA", ch.size, (0, 0, 0, 0))
-    canvas.alpha_composite(halo)
-    canvas.alpha_composite(line)
-    canvas.alpha_composite(ch)
-    return canvas
-
-
-def ground_shadow(canvas, cx, base_y, tw, strength=0.42):
-    sw, sh = int(tw * 0.95), int(tw * 0.16)
-    im = Image.new("RGBA", (sw, sh), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    d.ellipse((0, 0, sw - 1, sh - 1), fill=(20, 26, 34, int(255 * strength)))
-    im = im.filter(ImageFilter.GaussianBlur(max(3, int(sw * 0.06))))
-    canvas.alpha_composite(im, (int(cx - sw / 2), int(base_y - sh * 0.6)))
-
-
-def halftone_pass(img, dot=6, strength=0.10):
+def halftone(img, dot=6, strength=0.14):
     g = ImageOps.grayscale(img)
     small = g.resize((max(1, img.width // dot), max(1, img.height // dot)), Image.LANCZOS)
     dots = Image.new("L", img.size, 0)
@@ -112,34 +94,29 @@ def halftone_pass(img, dot=6, strength=0.10):
     return Image.composite(Image.new("RGB", img.size, INK), img, mask)
 
 
-for name, bg, aw, mh, mirror_mh, ax, mx, ah, mhh, lift, tint in VARIANTS:
+for name, bg, lift, tint, gamma, cards in VARIANTS:
     base = fit_cover(Image.open(os.path.join(BG, bg)).convert("RGB"), W, H)
-    base = brighten_bg(base, lift, tint)
+    base = brighten(base, lift, tint, gamma)
     canvas = base.convert("RGBA")
 
-    base_y = int(H * 0.95)
-    aw_img = with_outline_and_glow(load_char(aw, ah, False))
-    mh_img = with_outline_and_glow(load_char(mh, mhh, mirror_mh))
-
-    ground_shadow(canvas, W * ax, base_y, aw_img.width)
-    ground_shadow(canvas, W * mx, base_y, mh_img.width)
-
-    canvas.alpha_composite(aw_img, (int(W * ax - aw_img.width / 2), int(base_y - aw_img.height)))
-    canvas.alpha_composite(mh_img, (int(W * mx - mh_img.width / 2), int(base_y - mh_img.height)))
+    for key, (cx, by, size, angle) in zip(ORDER, cards):
+        card = photo_card(os.path.join(FACE, key + ".jpg"), size, angle)
+        x = int(W * cx - card.width / 2)
+        y = int(H * by - card.height)
+        canvas.alpha_composite(card, (x, y))
 
     img = canvas.convert("RGB")
-    img = halftone_pass(img, dot=6, strength=0.10)
+    img = halftone(img, dot=6, strength=0.14)
 
-    # 只留很淡的暗角，重点在四角，不压人物
     vig = Image.new("L", img.size, 0)
     d = ImageDraw.Draw(vig)
     d.ellipse((-W * 0.10, -H * 0.16, W * 1.10, H * 1.16), fill=255)
-    vig = ImageOps.invert(vig).point(lambda p: int(p * 0.24))
-    img = Image.composite(Image.new("RGB", img.size, (30, 36, 44)), img, vig)
+    vig = ImageOps.invert(vig).point(lambda p: int(p * 0.22))
+    img = Image.composite(Image.new("RGB", img.size, (32, 38, 46)), img, vig)
 
     d = ImageDraw.Draw(img)
     d.rectangle((0, 0, W - 1, H - 1), outline=INK, width=14)
 
-    img.save(os.path.join(OUT, name + ".jpg"), "JPEG", quality=90, optimize=True)
-    lum = sum(ImageOps.grayscale(img).getdata()) / (W * H)
-    print(f"  OK {name}.jpg   平均亮度 {lum:.0f}")
+    img.save(os.path.join(OUT, name + ".jpg"), "JPEG", quality=86, optimize=True)
+    lum = sum(ImageOps.grayscale(img).tobytes()) / (W * H)
+    print(f"  OK {name}.jpg  亮度 {lum:.0f}")

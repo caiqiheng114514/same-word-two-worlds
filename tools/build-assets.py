@@ -3,54 +3,21 @@
 
 用法：python tools/build-assets.py
 产出：
-  assets/sp/{aw,mh}-{normal,happy,puzzled}.png   立绘（CC0 表情表切图）
   assets/bg/*.jpg                                8 张场景背景（去色 + 分层 + 双色调）
-  assets/CREDITS.md                              署名（CC-BY 必须保留）
+  assets/cover.jpg                               封面（天星小轮 · 维港）
+  assets/CREDITS.md                              署名片（CC-BY 必须保留）
+
+注意：人物形象已改为真实照片（见 tools/make-faces.py），本脚本不再生成立绘。
 """
 import os
 from PIL import Image, ImageOps, ImageEnhance, ImageDraw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CAND = os.path.join(ROOT, "assets", "_cand")
-SP = os.path.join(ROOT, "assets", "sp")
 BG = os.path.join(ROOT, "assets", "bg")
-os.makedirs(SP, exist_ok=True)
 os.makedirs(BG, exist_ok=True)
 
-# ---------------- 立绘 ----------------
-SPRITES = {
-    ("aw", "normal"): "aw-r1c2.png",
-    ("aw", "happy"): "aw-r1c1.png",
-    ("aw", "puzzled"): "aw-r2c4.png",
-    ("mh", "normal"): "mh-r1c3.png",
-    ("mh", "happy"): "mh-r1c1.png",
-    ("mh", "puzzled"): "mh-r2c4.png",
-}
-SPRITE_H = 900
-
 PAPER = (251, 248, 240, 255)
-
-def solidify(src):
-    """把半透明的淡彩压到米白纸上，再用原 alpha 切出轮廓：
-    这样立绘在复杂背景上不会「透」得像幽灵，同时保留空白处透明。"""
-    src = src.convert("RGBA")
-    paper = Image.new("RGBA", src.size, PAPER)
-    comp = Image.alpha_composite(paper, src)          # 不透明底
-    mask = src.getchannel("A").point(lambda a: 255 if a > 10 else 0)
-    out = comp.convert("RGB").convert("RGBA")
-    out.putalpha(mask)
-    return out
-
-for (who, expr), cell in SPRITES.items():
-    cell_path = os.path.join(CAND, "cells", cell)
-    if not os.path.exists(cell_path):
-        print(f"  ! 缺切图 {cell}（{who}-{expr}）——保留现有文件")
-        continue
-    src = Image.open(cell_path)
-    s = SPRITE_H / src.height
-    out = src.resize((max(1, int(src.width * s)), SPRITE_H), Image.LANCZOS)
-    out = solidify(out)
-    out.save(os.path.join(SP, f"{who}-{expr}.png"))
 
 # ---------------- 背景 ----------------
 # key: (相对候选路径, 裁剪框或 None, 作品, 作者, 许可证, 原页)
@@ -177,15 +144,14 @@ lines = [
 for key, title, lic, page in rows:
     lines.append(f"| `assets/bg/{key}.jpg` | {title} | {lic} | {page} |")
 lines += [
-    "", "## 立绘", "",
-    "| 文件 | 作品 | 许可证 | 原页 |", "|---|---|---|---|",
-    "| `assets/sp/aw-*.png`、`assets/sp/mh-*.png` | VIsual novel Character Sprite（表情表切图） | CC0 | https://opengameart.org/content/visual-novel-character-sprite |",
+    "", "## 人物形象", "",
+    "人物为三位同学本人提供的照片，见 `assets/face/`（`tools/make-faces.py` 生成），不涉及第三方素材。",
     "", "## 处理方式", "",
     "- 背景统一做「去色 → 分层 → 网点 → 双色调（墨 `#1A222C` / 米 `#F4EAD6`）」，",
     "  目的是把不同作者、不同画风（写实渲染 / 插画 / 线稿 / 像素）压成同一套漫画分色，观感统一。",
-    "- 立绘由 CC0 表情表按格切分、等比放大到 900px 高，保留原色作为「专色」，在双色调背景上跳出来。",
-    "- 想换素材：保持同名文件即可（背景 `assets/bg/*.jpg` 1600×1067，立绘 `assets/sp/*.png` 高 900），代码不用改。",
-    "- 重新生成：`python tools/build-assets.py`（需要 Pillow）。",
+    "- 人物是真实照片，不做抠图（抠出来会有明显贴纸感），改成「照片卡」：降饱和 + 网点 + 纸张色 + 墨框。",
+    "- 想换素材：保持同名文件即可（背景 `assets/bg/*.jpg` 宽 1000，人物 `assets/face/*.jpg` 420×420），代码不用改。",
+    "- 重新生成：`python tools/build-assets.py`（需要 Pillow 和 `assets/_cand` 里的原图）。",
 ]
 with open(os.path.join(ROOT, "assets", "CREDITS.md"), "w", encoding="utf-8", newline="\n") as f:
     f.write("\n".join(lines) + "\n")

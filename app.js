@@ -428,7 +428,8 @@
 
   /* ---------------- 情景对话（galgame / 视觉小说） ---------------- */
   var STORY = window.__STORY__ || null;
-  var WHO = { aw: '阿伟', mh: '小明', narr: '旁白' };
+  var WHO = { lb: '刘博康', zq: '赵祈岳', cq: '蔡奇衡', narr: '旁白' };
+  var WHO_TAG = { lb: '香港', zq: '内地', cq: '内地' };
 
   var story = {
     idx: -1, bond: 20, streak: 0, right: 0, wrong: 0, hits: [],
@@ -438,7 +439,7 @@
   var lastAdvance = 0;
 
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
-  function spriteSrc(id, expr) { return 'assets/sp/' + id + '-' + (expr || 'normal') + '.png'; }
+  function faceSrc(id) { return 'assets/face/' + id + '.jpg'; }
 
   /* 默契值：0–100，分四档 */
   function bondStage(v) {
@@ -512,28 +513,33 @@
       }
     }
   }
-  /* who = 'aw' | 'mh' | 'narr' | null;  只显示正在说话的人 */
-  function setChar(who, expr) {
+  /* who = 'lb' | 'zq' | 'cq' | 'narr' | null；只显示正在说话的那个人 */
+  function setChar(who) {
     var img = $('vnChar');
+    var wrap = $('vnFace');
     if (!who || who === 'narr') {
+      wrap.hidden = true;
       img.hidden = true;
       img.removeAttribute('src');
       img.dataset.who = '';
       return;
     }
-    var src = spriteSrc(who, expr || 'normal');
+    var src = faceSrc(who);
     var changed = img.dataset.who !== who;
     if (img.getAttribute('src') !== src) {
       img.src = src;
-      if (changed) {                        // 换人时重放登场动画
-        img.style.animation = 'none';
-        void img.offsetWidth;
-        img.style.animation = '';
-      }
+      img.alt = WHO[who] || '';
     }
     img.dataset.who = who;
-    img.alt = WHO[who] || '';
     img.hidden = false;
+    wrap.hidden = false;
+    wrap.dataset.who = who;
+    $('vnFaceTag').textContent = WHO_TAG[who] || '';
+    if (changed) {                          // 换人时重放登场动画
+      wrap.style.animation = 'none';
+      void wrap.offsetWidth;
+      wrap.style.animation = '';
+    }
   }
 
   /* ---------------- 打字机 ---------------- */
@@ -585,6 +591,7 @@
     $('vnChoices').hidden = true;
     $('vnChoices').innerHTML = '';
     $('vnBox').classList.remove('has-choices', 'is-good', 'is-bad', 'is-narr');
+    $('vnStage').classList.remove('has-choices');
     $('btnStoryNext').hidden = false;
 
     renderBond();
@@ -623,6 +630,7 @@
     $('vnChoices').hidden = true;
     $('vnChoices').innerHTML = '';
     $('vnBox').classList.remove('has-choices', 'is-good', 'is-bad', 'is-narr');
+    $('vnStage').classList.remove('has-choices');
     $('btnStoryNext').hidden = false;
   }
 
@@ -689,11 +697,13 @@
   /* ---------------- 选项：长在文本框里 ---------------- */
   function renderStoryChoice(c) {
     story.locked = true;
-    $('vnName').textContent = '你要怎么理解？';
-    $('vnName').className = 'vn-name who-ask';
+    var asker = WHO[c.askBy] || '你';
+    $('vnName').textContent = asker + ' · ' + (c.askBy === 'cq' ? '一脸问号' : '拿不准');
+    $('vnName').className = 'vn-name who-' + (c.askBy || 'zq');
     $('vnBox').classList.remove('is-narr');
     $('vnBox').classList.add('has-choices');
-    setChar(null);                       // 提问时不出人，让人先想
+    $('vnStage').classList.add('has-choices');
+    setChar(c.askBy || 'zq');            // 谁拿不准就出谁
     typeText(c.ask);
 
     var box = $('vnChoices');
@@ -747,9 +757,9 @@
     });
 
     // 说话人现身（答对高兴 / 答错疑惑）
-    setChar('aw', ok ? 'happy' : 'puzzled');
-    $('vnName').textContent = '阿伟 · ' + (ok ? '称赞你' : '一脸疑惑');
-    $('vnName').className = 'vn-name who-aw';
+    setChar('lb');
+    $('vnName').textContent = '刘博康 · ' + (ok ? '接住了' : '笑了一下');
+    $('vnName').className = 'vn-name who-lb';
     $('vnBox').classList.toggle('is-good', ok);
     $('vnBox').classList.toggle('is-bad', !ok);
     typeText(ok ? c.ok : c.bad);
@@ -770,6 +780,7 @@
       if (story.idx !== at0) return;
       $('vnChoices').hidden = true;
       $('vnBox').classList.remove('has-choices');
+      $('vnStage').classList.remove('has-choices');
       $('btnStoryNext').hidden = false;
     }, 520);
   }
@@ -802,7 +813,7 @@
     var title, line;
     if (story.bond >= 75) {
       title = '「你听得明我讲咩」';
-      line = '八个词你都接住了。阿伟最后说，下次来香港不用他陪也行。';
+      line = '八个词你都接住了。刘博康最后说，下次来香港不用他带路也行。';
     } else if (story.bond >= 50) {
       title = '「下次你就识啦」';
       line = '大部分都懂了，还有几个词让他愣了一下——那正是要留意的。';

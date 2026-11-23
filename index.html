@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#10161d">
-<title>同词异义 · 小明在香港的一天</title>
+<title>同词异义 · 赵祈岳和蔡奇衡在香港的一天</title>
 <meta name="description" content="同一个词，香港和内地可以是两个意思。八幕情景对话，练「说到不确定的词，敢停下来问一句」。">
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232F6B5A'/><text x='16' y='23' font-size='19' text-anchor='middle' fill='%23FAF8F2' font-family='sans-serif'>同</text></svg>">
@@ -19,8 +19,8 @@
     <div class="cover-inner">
       <div class="cover-kicker">粤语 · 普通话 · 同词异义</div>
       <h1 class="cover-title">同词异义</h1>
-      <p class="cover-sub">小明在香港的一天</p>
-      <p class="cover-line">同一个词，两个世界。<br>从旺角街口到港铁站，八次「听不懂」。</p>
+      <p class="cover-sub">赵祈岳 · 蔡奇衡在香港的一天</p>
+      <p class="cover-line">同一个词，两个世界。<br>刘博康带路，从旺角街口到港铁站，八次「听不懂」。</p>
 
       <div class="cover-actions">
         <button class="cbtn cbtn-primary" id="btnCoverStart">
@@ -46,7 +46,10 @@
       <div class="vn-fx" aria-hidden="true"></div>
 
       <!-- 只显示正在说话的人，固定在左下角 -->
-      <img class="vn-char" id="vnChar" alt="" decoding="async" hidden>
+      <figure class="vn-face" id="vnFace" hidden>
+        <img class="vn-face-img" id="vnChar" alt="" decoding="async" hidden>
+        <figcaption class="vn-face-tag" id="vnFaceTag"></figcaption>
+      </figure>
 
       <div class="vn-top">
         <div class="vn-scene" id="vnScene">第一幕 · 早上 11:00｜旺角街口</div>
@@ -60,7 +63,7 @@
       </div>
 
       <div class="vn-box" id="vnBox">
-        <div class="vn-name" id="vnName">阿伟</div>
+        <div class="vn-name" id="vnName">刘博康</div>
         <p class="vn-text" id="vnText"></p>
         <p class="vn-fix" id="vnFix" hidden></p>
         <div class="vn-choices" id="vnChoices" hidden></div>
