@@ -442,9 +442,11 @@
       if (!this.on || !this.el) return;
       var el = this.el;
       if (!el.dataset.ready) { el.dataset.ready = '1'; el.load(); }
-      el.volume = 0;
-      var p = el.play();
-      if (p && p.catch) p.catch(function () {});
+      if (el.paused) {              // 只在暂停时才从 0 淡入，避免中途「掉音量」
+        el.volume = 0;
+        var p = el.play();
+        if (p && p.catch) p.catch(function () {});
+      }
       this.fadeTo(this.VOLUME);
     },
     fadeTo: function (target) {
@@ -456,6 +458,7 @@
         if ((target > el.volume && v >= target) || (target <= el.volume && v <= target)) {
           el.volume = target;
           clearInterval(self.fadeTimer);
+          if (target === 0) el.pause();     // 静音后停掉解码，省电省流量
         } else {
           el.volume = Math.max(0, Math.min(1, v));
         }
