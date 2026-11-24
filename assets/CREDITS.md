@@ -64,3 +64,11 @@ CC-BY 类素材**必须署名**——对外演示、发链接、交作业时请�
 > 原曲 27 秒，截取前 20 秒并做首尾淡入淡出，用浏览器 Web Audio + MediaRecorder 压成 Opus（60 KB）；
 > gm.mp3 是给不支持 WebM 的老浏览器（部分 Safari）兜底，平时不会下载。
 > 音量默认 0.2，右下角喇叭可开关，选择记在 localStorage。
+## 结算 CG 里的图标
+
+| 文件 | 用途 | 来源 | 许可 |
+|---|---|---|---|
+| ssets/_icon/thumbs.png、sweat.png、sparkle.png | 高分的大拇指、低分的汗滴、装饰星 | [Twemoji](https://github.com/jdecked/twemoji) | CC-BY 4.0 |
+
+> 只有重新生成 CG 时才需要（python tools/make-end-cg.py），运行时不加载。
+> 「无语」的三条竖线是脚本直接画的，不用素材。
